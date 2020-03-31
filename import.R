@@ -12,10 +12,11 @@ write.csv(historydf,"Crime History/history.csv")
 
 
 
-historydf %>%
+historydf<-historydf %>%
   group_by(year,borough,desc1)%>%
   summarize(n()) %>%
   filter(year>2006)
+
 runApp("Crime History")
 
 unique(historydf$year)

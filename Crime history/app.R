@@ -2,10 +2,11 @@ library(shiny)
 
 historydf<-read.csv("history.csv")
 
+
 df<-historydf %>%
-  group_by(year,desc1)%>%
-  summarize(n()) %>%
-  filter(year>2006) 
+  group_by(year,desc1) %>%
+  summarize(sum(n..))%>%
+  select(year,desc1,'sum(n..)')
 
 names(df)<-c("year","desc","count")
 
@@ -55,3 +56,4 @@ server <- function(input, output) {
   
 }
 shinyApp(ui = ui, server = server)
+
