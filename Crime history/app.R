@@ -1,14 +1,20 @@
 library(shiny)
+library(ggplot2)
+library(janitor)
+library(dplyr)
 
 historydf<-read.csv("history.csv")
-
-
-df<-historydf %>%
-  group_by(year,desc1) %>%
-  summarize(sum(n..))%>%
-  select(year,desc1,'sum(n..)')
-
-names(df)<-c("year","desc","count")
+names(historydf)<-c("x","year","borough","desc","count")
+df<-rbind_list(
+  historydf %>%
+    select(year,borough,desc,count),
+  historydf%>%
+    group_by(year,desc)%>%
+    summarize(count=sum(count),borough="all"))
+df<-rbind_list(df,
+               df%>%
+                 group_by(year,borough)%>%
+                 summarize(count=sum(count),desc="all"))
 
 ui <- fluidPage(
   
@@ -23,8 +29,13 @@ ui <- fluidPage(
       
       # Input: Slider for the number of bins ----
       selectInput(inputId = "crime",
-                  label = "Crime:",choices=unique(df$desc),selected="BURGLARY")
-      
+                  label = "Crime:",
+                  choices=unique(df$desc),
+                  selected="all"),
+      selectInput(inputId = "borough",
+                  label = "Borough:",
+                  choices=unique(df$borough),
+                  selected="all")
     ),
     
     # Main panel for displaying outputs ----
@@ -48,12 +59,15 @@ server <- function(input, output) {
   #    re-executed when inputs (input$bins) change
   # 2. Its output type is a plot
   output$distPlot <- renderPlot({
-    newdf=df[df$desc==input$crime,]
-    print(newdf)
-    plot(newdf$year,newdf$count, main="number of crimes per year",xlab="year",ylab="count",xlim=c(2006,2017),type="l")
+    
+    newdf=df[df$desc==input$crime&df$borough==input$borough,]
+    
+    ggplot(newdf, aes(x=year,y=count)) +
+      geom_line()+
+      ylim(0,NA)
+    
     
   })
   
 }
 shinyApp(ui = ui, server = server)
-
