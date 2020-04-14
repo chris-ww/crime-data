@@ -2,72 +2,51 @@ library(shiny)
 library(ggplot2)
 library(janitor)
 library(dplyr)
+library(tidyverse)
 
-historydf<-read.csv("history.csv")
-names(historydf)<-c("x","year","borough","desc","count")
-df<-rbind_list(
-  historydf %>%
-    select(year,borough,desc,count),
-  historydf%>%
-    group_by(year,desc)%>%
-    summarize(count=sum(count),borough="all"))
-df<-rbind_list(df,
-               df%>%
-                 group_by(year,borough)%>%
-                 summarize(count=sum(count),desc="all"))
+
+
+hour=read.csv("hour.csv")
+year=read.csv("year.csv")
+month=read.csv("month.csv")
+weekday=read.csv("weekday.csv")
+
+levels(weekday$weekday)=c("monday","tuesday","wednesday","thursday","friday","saturday","sunday")
+levels(month$month)=c("January","February","March","April","May","June","July","August","September","October","November","December")
+levels(hour$hour)=seq(0,24,by=1)
+levels(year$year)=seq(2006,2016,by=1)
 
 ui <- fluidPage(
-  
-  # App title ----
-  titlePanel("Crimes by year"),
-  
-  # Sidebar layout with input and output definitions ----
+  titlePanel("Crimes in New York City"),
   sidebarLayout(
-    
-    # Sidebar panel for inputs ----
     sidebarPanel(
-      
-      # Input: Slider for the number of bins ----
+      selectInput(inputId = "time",
+                  label = "Sort By TimeFrame:",
+                  choices=c("year","month","weekday","hour"),
+                  selected="hour"),
       selectInput(inputId = "crime",
-                  label = "Crime:",
-                  choices=unique(df$desc),
-                  selected="all"),
-      selectInput(inputId = "borough",
-                  label = "Borough:",
-                  choices=unique(df$borough),
+                  label = "crime:",
+                  choices=unique(year$desc),
                   selected="all")
     ),
     
-    # Main panel for displaying outputs ----
     mainPanel(
-      
-      # Output: Histogram ----
       plotOutput(outputId = "distPlot")
       
     )
   )
 )
-# Define server logic required to draw a histogram ----
 server <- function(input, output) {
-  
-  # Histogram of the Old Faithful Geyser Data ----
-  # with requested number of bins
-  # This expression that generates a histogram is wrapped in a call
-  # to renderPlot to indicate that:
-  #
-  # 1. It is "reactive" and therefore should be automatically
-  #    re-executed when inputs (input$bins) change
-  # 2. Its output type is a plot
   output$distPlot <- renderPlot({
-    
-    newdf=df[df$desc==input$crime&df$borough==input$borough,]
-    
-    ggplot(newdf, aes(x=year,y=count)) +
-      geom_line()+
-      ylim(0,NA)
-    
-    
+    time=input$time
+    df=get(paste(time))
+    df=na.omit(df[df$desc==input$crime,])
+    ggplot(df, aes(x=get(paste(time)),y=count)) +
+      geom_bar(stat="identity")+
+      ylim(0,NA)+
+      xlab(paste(time))
   })
   
 }
+
 shinyApp(ui = ui, server = server)
