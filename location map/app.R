@@ -4,27 +4,38 @@ library(janitor)
 library(dplyr)
 library(leaflet)
 
-historydf<-read.csv("history.csv")
-shinyServer(function (input, output) {
-  output$map <- renderLeaflet({leaflet(crime) %>%
-      setView(lng = -73.98928, lat = 40.75042, zoom = 10) %>%
-      addProviderTiles("CartoDB.Positron", options = providerTileOptions(noWrap = TRUE))})
-  
-})
-#crime <- read.csv("crime.csv", header=TRUE, stringsAsFactors=FALSE)
-shinyUI(
-  # Use a fluid Bootstrap layout
+locdf<-read.csv("location.csv")
+locdf<-na.omit(locdf)
+
+ui<-shinyUI(
   fluidPage(
-    # Give the page a title
-    titlePanel("NYC Crime Statistics"),
-    mainPanel(leafletOutput("map"))
+    titlePanel("NYC Crime Locations"),
+    sidebarLayout(
+      sidebarPanel(
+        selectInput(inputId = "crime",
+                    label = "crime:",
+                    choices=c(levels(unique(locdf$desc1)),"all"),
+                    selected="ROBBERY")
+      ),
+      
+      mainPanel(leafletOutput("map"))
+    )
   )
 )
-shinyServer(function (input, output) {
+server<-function (input, output) {
   output$map <- renderLeaflet({
-    leaflet() %>%
-      setView(lng = -73.98928, lat = 40.75042, zoom = 10) %>%
-      addProviderTiles("CartoDB.Positron", options = providerTileOptions(noWrap = TRUE))
+    if(input$crime=="all"){
+      mapdf<-locdf
+    }
+    else{
+      mapdf<-locdf %>%
+        select(desc1,latitude,longitude)%>%
+        filter(desc1==input$crime)
+    }
+    leaflet(data=mapdf) %>%
+      setView(lng = -74, lat = 40.7, zoom = 10) %>%
+      addProviderTiles("CartoDB.Positron", options = providerTileOptions(noWrap = TRUE)) %>%
+      addMarkers(lat=mapdf$latitude,lng=mapdf$longitude, clusterOptions = markerClusterOptions())
   })
-})
-shinyApp(ui = shinyUI, server = shinyServer)
+}
+shinyApp(ui = ui, server = server)
